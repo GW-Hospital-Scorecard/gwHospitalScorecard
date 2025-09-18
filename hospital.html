@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Rankings – Georgia Watch Scorecard</title>
+  <link rel="stylesheet" href="styles.css" />
+  <style>html{font-family:"Century Gothic","Avant Garde",Avenir,Helvetica,Arial,sans-serif}</style>
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap header-inner">
+      <a class="brand" href="index.html">
+        <span class="brand-mark">WATCH</span>
+        <span class="brand-text">Georgia Watch</span>
+      </a>
+      <nav class="main-nav" aria-label="Primary">
+        <a href="georgiawatch.html">Georgia Watch</a>
+        <a href="index.html" class="active">Rankings</a>
+        <a href="methodology.html" class="">Methodology</a>
+        <a href="about.html" class="">About Us</a>
+              <a href="cities.html" class="">Cities</a>
+      </nav>
+      <div class="header-cta">
+        <div class="donate-help">
+          <span>Help us keep GWATCH running</span>
+          <a class="btn btn-donate" href="#">Donate</a>
+        </div>
+        <a class="btn btn-download" href="#" id="downloadBtn">Download Results</a>
+        <a class="btn" href="./data/2025-LownHospitalsIndex-GA.xlsx">Download Spreadsheet</a>
+        <a class="btn" href="#" id="downloadCsvBtn">Export CSV</a>
+      </div>
+    </div>
+    <div class="wrap hero">
+      <h1>GEORGIA WATCH<br><span class="h1-sub">Georgia Hospital System Scorecard</span></h1>
+      <p class="tagline">Advocating for patients and protecting consumers since 2002</p>
+    </div>
+  </header>
+
+  <div class="wrap page">
+    <aside class="sidebar">
+      <label class="field">
+        <span>Enter hospital name</span>
+        <input id="nameFilter" type="text" placeholder="Type to search…" />
+      </label>
+
+      <fieldset class="facet">
+        <legend>Filters</legend>
+
+        <label class="check">
+          <input type="checkbox" id="fUrban">
+          <span>Urban</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" id="fRural">
+          <span>Rural</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" id="fCAH">
+          <span>Critical Access</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" id="fNonprofit">
+          <span>Nonprofit</span>
+        </label>
+
+        <label class="check">
+          <input type="checkbox" id="fSystem">
+          <span>In a System</span>
+        </label>
+
+        <button id="clearFilters" class="btn btn-clear">Clear filters</button>
+      </fieldset>
+
+      <div class="facet facet-cities">
+        <div class="facet-head">
+          <strong>Cities</strong>
+          <button id="allCities" class="linklike">All cities</button>
+        </div>
+        <div id="cityList" class="city-list"></div>
+      </div>
+    </aside>
+
+    <main class="content">
+      <div class="results-bar">
+        <span id="resultCount">Viewing 0 results</span>
+        <div id="activePills" class="pills"></div>
+      </div>
+
+      <div class="legend grade-legend" style="margin:8px 0 12px;">
+        <span class="legend-swatch A">A</span>
+        <span class="legend-swatch B">B</span>
+        <span class="legend-swatch C">C</span>
+        <span class="legend-swatch D">D</span>
+        <span class="legend-swatch F">F</span>
+      </div>
+
+      <section id="results"></section>
+
+      <section class="detail-panel hidden" id="detailPanel">
+        <div class="panel-head">
+          <div class="rank" id="d-rank">1</div>
+          <div class="badge" id="d-grade">A</div>
+          <div class="panel-titles">
+            <h3 class="hosp-name" id="d-name">Hospital</h3>
+            <p class="hosp-meta" id="d-addr">Address</p>
+          </div>
+          <button class="chev" id="toggleDetail" aria-expanded="true" aria-controls="detailBody">▾</button>
+        </div>
+        <div class="panel-body" id="detailBody">
+          <div class="mini-map">Map placeholder</div>
+          <ul class="facts" id="facts"></ul>
+          <div class="cat-cards">
+            <div class="cat">Financial Transparency &amp; Institutional Health</div>
+            <div class="cat">Community Benefit Spending</div>
+            <div class="cat">Healthcare Access &amp; Social Responsibility</div>
+            <div class="cat">Healthcare Affordability &amp; Billing</div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <nav class="footer-nav">
+        <a href="georgiawatch.html">Georgia Watch</a>
+        <a href="index.html">Rankings</a>
+        <a href="methodology.html">Methodology</a>
+        <a href="about.html">About Us</a>
+        <a href="#">Donate</a>
+        <a href="#">Legal/Privacy</a>
+        <a href="#">Site Map</a>
+              <a href="cities.html" class="">Cities</a>
+      </nav>
+      <p class="copyright">
+        Georgia Watch is a non-profit, nonpartisan 501(c)(3) organization. © 2024 Georgia Watch. All Rights Reserved.
+      </p>
+    </div>
+  </footer>
+
+  <script type="module">
+    import { gradeLetter, uniqueCities, toCsv } from './ui.js';
+
+    const dataUrl = './data/2025_Lown_Index.json';
+    const resEl = document.getElementById('results');
+    const countEl = document.getElementById('resultCount');
+    const pillsEl = document.getElementById('activePills');
+    const cityList = document.getElementById('cityList');
+    const allCitiesBtn = document.getElementById('allCities');
+
+    const nameFilter = document.getElementById('nameFilter');
+    const fUrban = document.getElementById('fUrban');
+    const fRural = document.getElementById('fRural');
+    const fCAH = document.getElementById('fCAH');
+    const fNonprofit = document.getElementById('fNonprofit');
+    const fSystem = document.getElementById('fSystem');
+    const clearFilters = document.getElementById('clearFilters');
+
+    const downloadBtn = document.getElementById('downloadBtn');
+    const downloadCsvBtn = document.getElementById('downloadCsvBtn');
+
+    const detailPanel = document.getElementById('detailPanel');
+    const dRank = document.getElementById('d-rank');
+    const dGrade = document.getElementById('d-grade');
+    const dName = document.getElementById('d-name');
+    const dAddr = document.getElementById('d-addr');
+    const facts = document.getElementById('facts');
+    const toggleDetail = document.getElementById('toggleDetail');
+    const detailBody = document.getElementById('detailBody');
+
+    let raw = [];
+    let view = [];
+    let selectedCity = null;
+
+    // Accept ?city= to prefilter rankings
+    const params = new URLSearchParams(location.search);
+    const initialCity = params.get('city');
+    if (initialCity) selectedCity = initialCity;
+
+    const data = await fetch(dataUrl).then(r => r.json());
+    raw = Array.isArray(data) ? data : (data.items || []);
+
+    // Build city list
+    const cities = uniqueCities(raw);
+    cityList.innerHTML = cities.map(c => `<button class="city" data-city="${}">`.format(c) if false else '').strip()
+  </script>
+</body>
+</html>
+
+    cityList.addEventListener('click', (e)=>{
+      const btn = e.target.closest('[data-city]');
+      if(!btn) return;
+      selectedCity = btn.dataset.city;
+      nameFilter.value = '';
+      applyFilters();
+      window.scrollTo({top:0, behavior:'smooth'});
+    });
+    allCitiesBtn.addEventListener('click', ()=>{
+      selectedCity = null;
+      applyFilters();
+    });
+
+    // Downloads
+    downloadBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const blob = new Blob([JSON.stringify(view.length?view:raw, null, 2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'scorecard_results.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+    downloadCsvBtn.addEventListener('click', (e)=>{
+      e.preventDefault();
+      const arr = (view.length?view:raw);
+      const csv = toCsv(arr, ['Name','City','Address','Zip','County','Size','HOSPITAL_SYSTEM','OWNERSHIP','TIER_1_GRADE_Lown_Composite']);
+      const blob = new Blob([csv], {type:'text/csv'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'scorecard_results.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function truthyCAH(r){
+      return !!(r.TYPE_HospTyp_CAH || r.CAH || r.CriticalAccess);
+    }
+    function isNonprofit(r){
+      const flag = r.TYPE_ownership_NonProfit ?? r.NONPROFIT ?? r.nonprofit;
+      if (flag !== undefined && flag !== null){
+        if (flag === true) return true;
+        if (flag === false) return false;
+        const s = String(flag).toLowerCase();
+        if (s==='1'||s==='y'||s==='yes'||s==='true') return true;
+        if (s==='0'||s==='n'||s==='no'||s==='false') return false;
+      }
+      const own = (r.OWNERSHIP || r.Ownership || r.Owner || '').toString().toLowerCase();
+      return own.includes('non') || own.includes('not-for-profit') || own.includes('non-profit');
+    }
+
+    function buildPills(){
+      const pills = [];
+      if (selectedCity) pills.push(`City: ${selectedCity}`);
+      if (fUrban.checked) pills.push('Urban');
+      if (fRural.checked) pills.push('Rural');
+      if (fCAH.checked) pills.push('Critical Access');
+      if (fNonprofit.checked) pills.push('Nonprofit');
+      if (fSystem.checked) pills.push('In a System');
+      const q = nameFilter.value.trim();
+      if (q) pills.push(`Search: "${q}"`);
+      pillsEl.innerHTML = pills.map(t => `<span class="pill">${t}</span>`).join('');
+    }
+
+    function applyFilters(){
+      const q = nameFilter.value.trim().toLowerCase();
+
+      view = raw.filter(r => {
+        if (selectedCity && (r.City||'') !== selectedCity) return false;
+
+        if (q){
+          const nameMatch = (r.Name||'').toLowerCase().includes(q);
+          const cityMatch = (r.City||'').toLowerCase().includes(q);
+          if (!(nameMatch || cityMatch)) return false;
+        }
+
+        if (fUrban.checked && !r.TYPE_urban) return false;
+        if (fRural.checked && !r.TYPE_rural) return false;
+        if (fCAH.checked && !truthyCAH(r)) return false;
+        if (fNonprofit.checked && !isNonprofit(r)) return false;
+        if (fSystem.checked && !(r.HOSPITAL_SYSTEM === 'Y')) return false;
+
+        return true;
+      });
+
+      buildPills();
+      render();
+    }
+
+    [nameFilter, fUrban, fRural, fCAH, fNonprofit, fSystem].forEach(el => {
+      el.addEventListener('input', applyFilters);
+      el.addEventListener('change', applyFilters);
+    });
+    clearFilters.addEventListener('click', (e)=>{
+      e.preventDefault();
+      nameFilter.value = '';
+      [fUrban, fRural, fCAH, fNonprofit, fSystem].forEach(c => c.checked = false);
+      selectedCity = null;
+      applyFilters();
+    });
+
+    function render(){
+      const arr = (view.length ? view : raw).slice(0, 200);
+      countEl.textContent = `Viewing ${arr.length} results`;
+      resEl.innerHTML = arr.map((r, i) => cardRow(r, i+1)).join('');
+      resEl.querySelectorAll('.btn-details').forEach(btn => {
+        btn.addEventListener('click', (e)=>{
+          e.preventDefault();
+          const idx = +btn.dataset.idx;
+          const r = arr[idx-1];
+          openDetail(r, idx);
+        });
+      });
+    }
+
+    function cardRow(r, rank){
+      const gl = gradeLetter(r.TIER_1_GRADE_Lown_Composite);
+      const gradeCls = `grade-${gl.toLowerCase()}`;
+      return `
+      <article class="result">
+        <div class="rank">${rank}</div>
+        <div class="badge ${gradeCls}">${gl}</div>
+        <div class="result-body">
+          <h3 class="hosp-name">${r.Name || 'Hospital Information'}</h3>
+          <p class="hosp-meta">${r.Address || 'Address/Location'}</p>
+        </div>
+        <a class="btn btn-details" href="#" data-idx="${rank}">Details</a>
+      </article>`;
+    }
+
+    function openDetail(r, rank){
+      dRank.textContent = rank;
+      const gl = gradeLetter(r.TIER_1_GRADE_Lown_Composite).toLowerCase();
+      dGrade.className = 'badge grade-' + gl;
+      dGrade.textContent = gl.toUpperCase();
+      dName.textContent = r.Name || 'Hospital';
+      dAddr.textContent = r.Address || (r.City || '');
+
+      const sizeMap = {{s:'Small', m:'Medium', l:'Large'}};
+      const factsData = [
+        ['Beds', sizeMap[(r.Size||'').toLowerCase()] || '—'],
+        ['Critical Access', (r.TYPE_HospTyp_CAH||r.CAH||r.CriticalAccess) ? 'Yes' : 'No'],
+        ['System', r.HOSPITAL_SYSTEM === 'Y' ? 'System' : 'Independent'],
+        ['County', r.County || '—']
+      ];
+      facts.innerHTML = factsData.map(([k,v]) => `<li><strong>${k}:</strong> ${v}</li>`).join('');
+    }
